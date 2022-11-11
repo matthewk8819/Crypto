@@ -1,10 +1,7 @@
 #Variables
-players: public(address[100])
-numPlayers: public(uint256) #num of players to access player array
+players: public(DynArray[address,100])
 playersTurn: public(uint256)
-playersIn: HashMap[address,bool]#true if player is in game - might be unneeded
-losers: public(address[100])
-numLosers: public(uint256) #num of losers to access losers array 
+losers: public(DynArray[address,100])
 odds: public(uint256)
 creator: public(address)
 
@@ -12,8 +9,6 @@ creator: public(address)
 @external
 def __init__():
     self.creator = tx.origin#does this work? 
-    self.numPlayers = 0
-    self.numLosers = 0
     self.playersTurn = 0
 
 
@@ -23,25 +18,20 @@ def setOdds(oneInThisMany : uint256):
     self.odds = oneInThisMany
 
 
-#addPlayer - add to players
+#addPlayer - works
 @external
 def addPlayer(newPlayerAddress : address):
     assert newPlayerAddress not in self.losers
     assert newPlayerAddress not in self.players
-    self.players[self.numPlayers] = newPlayerAddress
-    self.numPlayers = self.numPlayers + 1
-    self.playersIn[newPlayerAddress] = True
+    self.players.append(newPlayerAddress)
 
 #lose - 
 @internal
 def lose(player : address):
-    self.losers[self.numLosers]=player
-    self.numLosers = self.numLosers + 1
-    #clear players in dyn(null) and hash(false) VERY IMPORTANT !!!!!*!*!*!*!*!*
-    self.numPlayers = 0
-    self.playersTurn = 0
-    #find a way to clear the self.players list and self.playersIn (if find one, delete other structure)
-
+    self.losers.append(player)
+    for i in self.players:
+        self.players.pop()
+    self.playersTurn=0
 
 #random - works 
 @internal
@@ -55,4 +45,12 @@ def play():
     num: uint256 = self.random()
     if num==1:
         self.lose(self.players[self.playersTurn])
-    self.playersTurn=self.playersTurn + 1
+    if self.playersTurn!=len(self.players)-1:
+        self.playersTurn=self.playersTurn + 1
+    if self.playersTurn==len(self.players)-1:
+        self.playersTurn=0
+
+#isALoser
+@external
+def isALoser(person : address) -> (bool):
+    return person in self.losers
